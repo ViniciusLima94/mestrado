@@ -6,7 +6,7 @@ import numpy as np
 h.celsius = 36
 h.load_file('stdrun.hoc')
 	
-def simulate(I = 0.8):
+def simulate(I = 0.8, curr = True, noise = False):
 
 	soma = h.Section(name = 'soma')
 	soma.L = soma.diam = 67
@@ -27,12 +27,18 @@ def simulate(I = 0.8):
 
 	apc = h.APCount(soma(0.5))
 
+	if noise == True:
+		fl = h.Gfluct2(soma(0.5))
+		fl.std_e = 0.012
+		fl.std_i = 0.0264	
+
 	h.v_init = -70
 
-	stim = h.IClamp(soma(0.5))
-	stim.delay = 300
-	stim.dur = 400
-	stim.amp = I
+	if curr == True:
+		stim = h.IClamp(soma(0.5))
+		stim.delay = 300
+		stim.dur = 400
+		stim.amp = I
 
 	t_vec = h.Vector()
 	v_vec = h.Vector()
@@ -51,7 +57,7 @@ plt.figure('FStrace')
 plt.plot(t_vec, v_vec)
 plt.ylabel('Potencial de Membrana [mV]')
 plt.xlabel('Tempo [ms]')
-plt.savefig('FStrace.pdf', dpi = 600)
+#plt.savefig('FStrace.pdf', dpi = 600)
 
 
 import sys  
@@ -68,4 +74,11 @@ plt.figure('FSfi')
 plt.plot(I, count)
 plt.ylabel('Frequência de disparos [Hz]')
 plt.xlabel('Corrente injetada [nA]')
-plt.savefig('FSfi.pdf', dpi = 600)
+#plt.savefig('FSfi.pdf', dpi = 600)
+
+_, t_vec, v_vec = simulate(I = 0.8, curr = False, noise = True)
+plt.figure('FStracenoise')
+plt.plot(t_vec, v_vec)
+plt.ylabel('Potencial de Membrana [mV]')
+plt.xlabel('Tempo [ms]')
+#plt.savefig('FStracenoise.pdf', dpi = 600)

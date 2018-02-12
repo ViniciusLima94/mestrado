@@ -6,7 +6,7 @@ import numpy as np
 h.celsius = 36
 h.load_file('stdrun.hoc')
 
-def simulate(I = 0.8):
+def simulate(I = 0.8, curr = True, noise = False):
 	
 	soma = h.Section(name = 'soma')
 	soma.L = soma.diam = 96
@@ -31,12 +31,19 @@ def simulate(I = 0.8):
 
 	apc = h.APCount(soma(0.5))
 
+	if noise == True:
+		fl = h.Gfluct2(soma(0.5))
+		fl.std_e = 0.012
+		fl.std_i = 0.0264	
+
+
 	h.v_init = -70
 
-	stim = h.IClamp(soma(0.5))
-	stim.delay = 300
-	stim.dur = 400
-	stim.amp = I
+	if curr == True:
+		stim = h.IClamp(soma(0.5))
+		stim.delay = 300
+		stim.dur = 400
+		stim.amp = I
 
 	t_vec = h.Vector()
 	v_vec = h.Vector()
@@ -46,14 +53,14 @@ def simulate(I = 0.8):
 	h.tstop = 1000
 	h.run()
 
-	return apc.n, t_vec, v_vec
+	return apc.n, np.array(t_vec), np.array(v_vec)
 	
 count, t_vec, v_vec = simulate()
-plt.figure('RStrace')
-plt.plot(t_vec, v_vec)
-plt.ylabel('Potencial de Membrana [mV]')
-plt.xlabel('Tempo [ms]')
-plt.savefig('RStrace.pdf', dpi = 600)
+#plt.figure('RStrace')
+#plt.plot(t_vec, v_vec)
+#plt.ylabel('Potencial de Membrana [mV]')
+#plt.xlabel('Tempo [ms]')
+#plt.savefig('RStrace.pdf', dpi = 600)
 
 
 import sys  
@@ -66,8 +73,32 @@ for amp in I:
 	c, _, _  = simulate(I = amp)
 	count.append(c / 100e-3)
 
-plt.figure('RSfi')
-plt.plot(I, count)
-plt.ylabel('Frequência de disparos [Hz]')
-plt.xlabel('Corrente injetada [nA]')
-plt.savefig('RSfi.pdf', dpi = 600)
+#plt.figure('RSfi')
+#plt.plot(I, count)
+#plt.ylabel('Frequência de disparos [Hz]')
+#plt.xlabel('Corrente injetada [nA]')
+#plt.savefig('RSfi.pdf', dpi = 600)
+
+_, t_vec, v_vec = simulate(I = 0.8, curr = False, noise = True)
+#plt.figure('RStracenoise')
+#plt.plot(t_vec, v_vec)
+#plt.ylabel('Potencial de Membrana [mV]')
+#plt.xlabel('Tempo [ms]')
+#plt.savefig('RStracenoise.pdf', dpi = 600)
+
+from detect_peaks import detect_peaks
+
+index = detect_peaks(v_vec, mph = -10)  # mph = -10, peaks with height greater than -10mV
+# Store number of peaks in the signal
+Npeaks = len(index)
+
+vl = []
+idx_ = []
+for i in index:
+	v = v_vec[i-60:i]
+	t = np.array(range(len(v)))*0.025
+	v1 = np.diff(v,1)[:-1]
+	v2 = np.diff(v,2)
+	kp = v2 * (1-v1**2)**(-1.5)
+	idx = np.argmax(kp)
+	vl.append(np.max(v[idx]))
